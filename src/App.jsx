@@ -17,7 +17,7 @@ const MONTHS = [
 ]
 
 function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
 }
 
 const initialTransactions = [
@@ -292,7 +292,7 @@ export default function App() {
                     </select>
                   </div>
                   <div className="form-row">
-                    <label>Amount ($)</label>
+                    <label>Amount (₹)</label>
                     <input required type="number" min="0.01" step="0.01" value={form.amount}
                       onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" />
                   </div>
@@ -331,7 +331,7 @@ export default function App() {
                     <span className="budget-edit-icon">{CAT_ICONS[cat]}</span>
                     <label>{cat}</label>
                     <div className="budget-edit-input-wrap">
-                      <span className="input-prefix">$</span>
+                      <span className="input-prefix">₹</span>
                       <input type="number" min="0" step="1"
                         value={budgetLimits[cat]}
                         onChange={e => setBudgetLimits(b => ({ ...b, [cat]: parseFloat(e.target.value) || 0 }))} />
