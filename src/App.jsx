@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, AreaChart, Area
+  PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts'
 import './App.css'
 
+/* ── Constants ────────────────────────────────── */
 const CATEGORIES = [
   'Housing', 'Food', 'Transport', 'Healthcare',
   'Entertainment', 'Shopping', 'Education', 'Savings', 'Other'
@@ -23,10 +24,27 @@ const MONTHS = [
 ]
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
+const CURRENCIES = [
+  { code: 'INR', symbol: '₹', locale: 'en-IN', label: 'Indian Rupee' },
+  { code: 'USD', symbol: '$', locale: 'en-US', label: 'US Dollar' },
+  { code: 'EUR', symbol: '€', locale: 'de-DE', label: 'Euro' },
+  { code: 'GBP', symbol: '£', locale: 'en-GB', label: 'British Pound' },
+  { code: 'JPY', symbol: '¥', locale: 'ja-JP', label: 'Japanese Yen' },
+  { code: 'AED', symbol: 'د.إ', locale: 'ar-AE', label: 'UAE Dirham' },
+  { code: 'SGD', symbol: 'S$', locale: 'en-SG', label: 'Singapore Dollar' },
+  { code: 'AUD', symbol: 'A$', locale: 'en-AU', label: 'Australian Dollar' },
+]
+
+function makeFmt(currency) {
+  return (amount) =>
+    new Intl.NumberFormat(currency.locale, {
+      style: 'currency',
+      currency: currency.code,
+      maximumFractionDigits: currency.code === 'JPY' ? 0 : 0,
+    }).format(amount)
 }
 
+/* ── Animated counter hook ────────────────────── */
 function useCountUp(target, duration = 700) {
   const [current, setCurrent] = useState(target)
   const prevRef = useRef(target)
@@ -47,72 +65,77 @@ function useCountUp(target, duration = 700) {
   return current
 }
 
-function AnimatedAmount({ value }) {
+/* ── Animated card amount (safe hook usage) ──── */
+function AnimatedCard({ value, fmt }) {
   const v = useCountUp(value)
-  return <>{formatCurrency(v)}</>
+  return <>{fmt(v)}</>
 }
 
-let nextId = 1
-
-const CustomTooltip = ({ active, payload, label }) => {
+/* ── Chart tooltips ───────────────────────────── */
+const makeBarTooltip = (fmt) => ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
     <div className="chart-tooltip">
       {label && <p className="tooltip-label">{label}</p>}
       {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color || p.fill }}>
-          {p.name}: {formatCurrency(p.value)}
-        </p>
+        <p key={i} style={{ color: p.color || p.fill }}>{p.name}: {fmt(p.value)}</p>
       ))}
     </div>
   )
 }
-
-const PieTooltip = ({ active, payload }) => {
+const makePieTooltip = (fmt) => ({ active, payload }) => {
   if (!active || !payload?.length) return null
   return (
     <div className="chart-tooltip">
       <p style={{ color: payload[0].payload.fill }}>{payload[0].name}</p>
-      <p>{formatCurrency(payload[0].value)}</p>
+      <p>{fmt(payload[0].value)}</p>
       <p style={{ color: '#7a8aaa', fontSize: '11px' }}>{payload[0].payload.percent}</p>
     </div>
   )
 }
 
+let nextId = 1
+
+/* ── Main Component ───────────────────────────── */
 export default function App() {
-  const [transactions, setTransactions] = useState([])
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [filterType, setFilterType] = useState('all')
-  const [filterCategory, setFilterCategory] = useState('all')
-  const [activeMonth, setActiveMonth] = useState(new Date().getMonth())
-  const [activeYear, setActiveYear] = useState(new Date().getFullYear())
-  const [budgetLimits, setBudgetLimits] = useState({
-    Housing: 0, Food: 0, Transport: 0, Healthcare: 0,
-    Entertainment: 0, Shopping: 0, Education: 0, Savings: 0, Other: 0
-  })
+  const [transactions, setTransactions]       = useState([])
+  const [showForm, setShowForm]               = useState(false)
+  const [editingId, setEditingId]             = useState(null)
+  const [filterType, setFilterType]           = useState('all')
+  const [filterCategory, setFilterCategory]   = useState('all')
+  const [activeMonth, setActiveMonth]         = useState(new Date().getMonth())
+  const [activeYear, setActiveYear]           = useState(new Date().getFullYear())
+  const [budgetLimits, setBudgetLimits]       = useState(
+    Object.fromEntries(CATEGORIES.map(c => [c, 0]))
+  )
   const [showBudgetEditor, setShowBudgetEditor] = useState(false)
   const [form, setForm] = useState({
-    type: 'expense', description: '', category: 'Food', amount: '', date: new Date().toISOString().split('T')[0]
+    type: 'expense', description: '', category: 'Food', amount: '',
+    date: new Date().toISOString().split('T')[0]
   })
-  const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [clearConfirm, setClearConfirm] = useState(false)
-  const [activeTab, setActiveTab] = useState('transactions') // 'transactions' | 'charts'
-  const [monthKey, setMonthKey] = useState(0)
+  const [deleteConfirm, setDeleteConfirm]     = useState(null)
+  const [clearConfirm, setClearConfirm]       = useState(false)
+  const [activeTab, setActiveTab]             = useState('transactions')
+  const [monthKey, setMonthKey]               = useState(0)
+  const [currency, setCurrency]               = useState(CURRENCIES[0])
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false)
 
-  // Particles
-  const particles = useMemo(() => Array.from({ length: 14 }, (_, i) => ({
-    id: i,
-    style: {
-      left: `${(i * 7.1 + 3) % 100}%`,
-      top: `${(i * 11.3 + 5) % 100}%`,
-      animationDelay: `${(i * 0.7) % 6}s`,
-      animationDuration: `${7 + (i % 5)}s`,
-      width: `${2 + (i % 3)}px`,
-      height: `${2 + (i % 3)}px`,
-    }
-  })), [])
+  const fmt = useMemo(() => makeFmt(currency), [currency])
 
+  const particles = useMemo(() =>
+    Array.from({ length: 14 }, (_, i) => ({
+      id: i,
+      style: {
+        left: `${(i * 7.1 + 3) % 100}%`,
+        top:  `${(i * 11.3 + 5) % 100}%`,
+        animationDelay:    `${(i * 0.7) % 6}s`,
+        animationDuration: `${7 + (i % 5)}s`,
+        width:  `${2 + (i % 3)}px`,
+        height: `${2 + (i % 3)}px`,
+      }
+    })), [])
+
+  /* Derived data */
   const monthlyTransactions = useMemo(() =>
     transactions.filter(t => {
       const d = new Date(t.date + 'T00:00:00')
@@ -129,52 +152,44 @@ export default function App() {
   const totalIncome  = useMemo(() => monthlyTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0), [monthlyTransactions])
   const totalExpense = useMemo(() => monthlyTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0), [monthlyTransactions])
   const balance = totalIncome - totalExpense
+  const savingsRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0
 
   const categoryExpenses = useMemo(() => {
-    const map = {}
-    CATEGORIES.forEach(c => (map[c] = 0))
-    monthlyTransactions.filter(t => t.type === 'expense').forEach(t => {
-      map[t.category] = (map[t.category] || 0) + t.amount
-    })
+    const map = Object.fromEntries(CATEGORIES.map(c => [c, 0]))
+    monthlyTransactions.filter(t => t.type === 'expense')
+      .forEach(t => { map[t.category] = (map[t.category] || 0) + t.amount })
     return map
   }, [monthlyTransactions])
 
-  // Chart data — last 6 months bar chart
-  const barChartData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      let m = activeMonth - (5 - i)
-      let y = activeYear
+  const barChartData = useMemo(() =>
+    Array.from({ length: 6 }, (_, i) => {
+      let m = activeMonth - (5 - i), y = activeYear
       while (m < 0) { m += 12; y-- }
       const txs = transactions.filter(t => {
         const d = new Date(t.date + 'T00:00:00')
         return d.getMonth() === m && d.getFullYear() === y
       })
       return {
-        month: MONTHS_SHORT[m],
+        month:   MONTHS_SHORT[m],
         Income:  txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
         Expense: txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
       }
-    })
-  }, [transactions, activeMonth, activeYear])
+    }), [transactions, activeMonth, activeYear])
 
-  // Pie chart — category breakdown
   const pieData = useMemo(() => {
     const total = totalExpense || 1
     return CATEGORIES
       .map(cat => ({
-        name: cat,
-        value: categoryExpenses[cat],
+        name: cat, value: categoryExpenses[cat],
         fill: CAT_COLORS[cat],
         percent: `${((categoryExpenses[cat] / total) * 100).toFixed(1)}%`
       }))
       .filter(d => d.value > 0)
   }, [categoryExpenses, totalExpense])
 
-  // Area chart — savings trend last 6 months
-  const areaData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      let m = activeMonth - (5 - i)
-      let y = activeYear
+  const areaData = useMemo(() =>
+    Array.from({ length: 6 }, (_, i) => {
+      let m = activeMonth - (5 - i), y = activeYear
       while (m < 0) { m += 12; y-- }
       const txs = transactions.filter(t => {
         const d = new Date(t.date + 'T00:00:00')
@@ -183,17 +198,15 @@ export default function App() {
       const inc = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
       const exp = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
       return { month: MONTHS_SHORT[m], Savings: Math.max(inc - exp, 0) }
-    })
-  }, [transactions, activeMonth, activeYear])
+    }), [transactions, activeMonth, activeYear])
 
+  /* Handlers */
   function handleSubmit(e) {
     e.preventDefault()
     if (!form.description || !form.amount || !form.date) return
     if (editingId !== null) {
       setTransactions(prev => prev.map(t => t.id === editingId
-        ? { ...t, ...form, amount: parseFloat(form.amount) }
-        : t
-      ))
+        ? { ...t, ...form, amount: parseFloat(form.amount) } : t))
       setEditingId(null)
     } else {
       setTransactions(prev => [...prev, { ...form, amount: parseFloat(form.amount), id: nextId++ }])
@@ -212,15 +225,13 @@ export default function App() {
     setDeleteConfirm(null)
   }
 
-  // Clear ALL expense transactions (keep income)
   function handleClearExpenses() {
     setTransactions(prev => prev.filter(t => t.type === 'income'))
     setClearConfirm(false)
   }
 
   function resetForm() {
-    setShowForm(false)
-    setEditingId(null)
+    setShowForm(false); setEditingId(null)
     setForm({ type: 'expense', description: '', category: 'Food', amount: '', date: new Date().toISOString().split('T')[0] })
   }
 
@@ -235,10 +246,12 @@ export default function App() {
     else setActiveMonth(m => m + 1)
   }
 
-  const savingsRate = totalIncome > 0 ? ((balance / totalIncome) * 100) : 0
+  const BarTip = useMemo(() => makeBarTooltip(fmt), [fmt])
+  const PieTip = useMemo(() => makePieTooltip(fmt), [fmt])
 
+  /* ── Render ── */
   return (
-    <div className="app">
+    <div className="app" onClick={() => showCurrencyPicker && setShowCurrencyPicker(false)}>
       <div className="bg-grid" />
       <div className="bg-glow bg-glow-1" />
       <div className="bg-glow bg-glow-2" />
@@ -263,7 +276,9 @@ export default function App() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
             <div className="month-label-wrap">
-              <span className="month-label" key={monthKey}>{MONTHS[activeMonth]} <span className="month-year">{activeYear}</span></span>
+              <span className="month-label" key={monthKey}>
+                {MONTHS[activeMonth]} <span className="month-year">{activeYear}</span>
+              </span>
             </div>
             <button className="nav-btn" onClick={nextMonth}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
@@ -271,6 +286,34 @@ export default function App() {
           </div>
 
           <div className="header-actions">
+            {/* Currency picker */}
+            <div className="currency-picker-wrap" onClick={e => e.stopPropagation()}>
+              <button className="btn-currency" onClick={() => setShowCurrencyPicker(v => !v)}>
+                <span className="currency-symbol">{currency.symbol}</span>
+                <span className="currency-code">{currency.code}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  style={{ transform: showCurrencyPicker ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }}>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+              {showCurrencyPicker && (
+                <div className="currency-dropdown">
+                  {CURRENCIES.map(c => (
+                    <button key={c.code}
+                      className={`currency-option ${currency.code === c.code ? 'currency-active' : ''}`}
+                      onClick={() => { setCurrency(c); setShowCurrencyPicker(false) }}>
+                      <span className="cur-sym">{c.symbol}</span>
+                      <span className="cur-info">
+                        <span className="cur-code">{c.code}</span>
+                        <span className="cur-label">{c.label}</span>
+                      </span>
+                      {currency.code === c.code && <span className="cur-check">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button className="btn-ghost" onClick={() => setShowBudgetEditor(true)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M19.07 19.07A10 10 0 0 0 4.93 4.93"/></svg>
               Limits
@@ -304,7 +347,7 @@ export default function App() {
               <p className="card-amount">
                 {c.rate !== undefined
                   ? <>{savingsRate.toFixed(1)}<span className="card-unit">%</span></>
-                  : <AnimatedAmount value={c.value} />}
+                  : <AnimatedCard value={c.value} fmt={fmt} />}
               </p>
               <p className="card-sub">{c.sub}</p>
               <div className="card-shine" />
@@ -312,7 +355,7 @@ export default function App() {
           ))}
         </section>
 
-        {/* ── Tab Switcher ── */}
+        {/* ── Tab Bar ── */}
         <div className="tab-bar">
           <button className={`tab-btn ${activeTab === 'transactions' ? 'tab-active' : ''}`} onClick={() => setActiveTab('transactions')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -341,7 +384,8 @@ export default function App() {
                   </select>
                   <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
                     <option value="all">All Categories</option>
-                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                    {/* ✅ value={c} so the stored value is always the plain category name */}
+                    {CATEGORIES.map(c => <option key={c} value={c}>{CAT_ICONS[c]} {c}</option>)}
                   </select>
                 </div>
               </div>
@@ -358,17 +402,18 @@ export default function App() {
                   {[...filtered].sort((a, b) => new Date(b.date) - new Date(a.date)).map((t, i) => (
                     <div key={t.id} className="transaction-item" style={{ animationDelay: `${i * 0.04}s` }}>
                       <div className={`tx-icon-wrap ${t.type === 'income' ? 'tx-icon-income' : 'tx-icon-expense'}`}>
-                        <span>{CAT_ICONS[t.category]}</span>
+                        {/* ✅ CAT_ICONS[t.category] always works because t.category is now the plain name */}
+                        <span>{CAT_ICONS[t.category] || '📦'}</span>
                       </div>
                       <div className="tx-info">
                         <span className="tx-desc">{t.description}</span>
                         <span className="tx-meta">
-                          <span className="tx-cat-badge">{t.category}</span>
+                          <span className="tx-cat-badge">{CAT_ICONS[t.category] || ''} {t.category}</span>
                           {new Date(t.date + 'T00:00:00').toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
                       <span className={`tx-amount ${t.type === 'income' ? 'amount-income' : 'amount-expense'}`}>
-                        {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                        {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}
                       </span>
                       <div className="tx-actions">
                         <button className="icon-btn edit-btn" onClick={() => handleEdit(t)} title="Edit">
@@ -396,8 +441,8 @@ export default function App() {
                 {CATEGORIES.map((cat, i) => {
                   const spent = categoryExpenses[cat] || 0
                   const limit = budgetLimits[cat] || 0
-                  const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
-                  const over = spent > limit && limit > 0
+                  const pct   = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
+                  const over  = spent > limit && limit > 0
                   return (
                     <div key={cat} className="budget-item" style={{ animationDelay: `${i * 0.05}s` }}>
                       <div className="budget-item-header">
@@ -406,17 +451,18 @@ export default function App() {
                           <span className="budget-cat">{cat}</span>
                         </div>
                         <span className={`budget-amounts ${over ? 'over-budget' : ''}`}>
-                          {formatCurrency(spent)}<span className="budget-limit"> / {limit > 0 ? formatCurrency(limit) : 'No limit'}</span>
+                          {fmt(spent)}<span className="budget-limit"> / {limit > 0 ? fmt(limit) : 'No limit'}</span>
                         </span>
                       </div>
                       {limit > 0 && (
                         <>
                           <div className="progress-track">
-                            <div className={`progress-bar ${over ? 'bar-over' : pct > 80 ? 'bar-warning' : 'bar-ok'}`} style={{ width: `${pct}%`, animationDelay: `${0.3 + i * 0.05}s` }} />
+                            <div className={`progress-bar ${over ? 'bar-over' : pct > 80 ? 'bar-warning' : 'bar-ok'}`}
+                              style={{ width: `${pct}%`, animationDelay: `${0.3 + i * 0.05}s` }} />
                           </div>
                           <div className="budget-footer">
                             <span className="pct-label">{pct.toFixed(0)}% used</span>
-                            {over && <span className="over-label">⚠ Over by {formatCurrency(spent - limit)}</span>}
+                            {over && <span className="over-label">⚠ Over by {fmt(spent - limit)}</span>}
                           </div>
                         </>
                       )}
@@ -431,24 +477,22 @@ export default function App() {
         {/* ── Charts Tab ── */}
         {activeTab === 'charts' && (
           <div className="charts-grid">
-            {/* Income vs Expenses Bar */}
+            {/* Bar: Income vs Expense */}
             <div className="chart-card glass-card">
               <div className="chart-header">
                 <h2>Income vs Expenses</h2>
                 <p className="section-sub">Last 6 months</p>
               </div>
               {transactions.length === 0 ? (
-                <div className="chart-empty">
-                  <span>📊</span><p>Add transactions to see chart</p>
-                </div>
+                <div className="chart-empty"><span>📊</span><p>Add transactions to see chart</p></div>
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={barChartData} barGap={4} barCategoryGap="28%">
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis dataKey="month" tick={{ fill: '#7a8aaa', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#7a8aaa', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                    <Legend wrapperStyle={{ fontSize: '12px', color: '#7a8aaa', paddingTop: '12px' }} />
+                    <YAxis tick={{ fill: '#7a8aaa', fontSize: 11 }} axisLine={false} tickLine={false}
+                      tickFormatter={v => `${currency.symbol}${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
+                    <Tooltip content={<BarTip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                     <Bar dataKey="Income"  fill="#22d37a" radius={[6,6,0,0]} maxBarSize={40} />
                     <Bar dataKey="Expense" fill="#ff6b6b" radius={[6,6,0,0]} maxBarSize={40} />
                   </BarChart>
@@ -456,16 +500,14 @@ export default function App() {
               )}
             </div>
 
-            {/* Savings Trend Area */}
+            {/* Area: Savings trend */}
             <div className="chart-card glass-card">
               <div className="chart-header">
                 <h2>Savings Trend</h2>
                 <p className="section-sub">Last 6 months</p>
               </div>
               {transactions.length === 0 ? (
-                <div className="chart-empty">
-                  <span>📈</span><p>Add transactions to see trend</p>
-                </div>
+                <div className="chart-empty"><span>📈</span><p>Add transactions to see trend</p></div>
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
                   <AreaChart data={areaData}>
@@ -477,24 +519,26 @@ export default function App() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis dataKey="month" tick={{ fill: '#7a8aaa', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#7a8aaa', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(129,140,248,0.3)' }} />
-                    <Area type="monotone" dataKey="Savings" stroke="#818cf8" strokeWidth={2.5} fill="url(#savingsGrad)" dot={{ fill: '#818cf8', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, fill: '#818cf8' }} />
+                    <YAxis tick={{ fill: '#7a8aaa', fontSize: 11 }} axisLine={false} tickLine={false}
+                      tickFormatter={v => `${currency.symbol}${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
+                    <Tooltip content={<BarTip />} cursor={{ stroke: 'rgba(129,140,248,0.3)' }} />
+                    <Area type="monotone" dataKey="Savings" stroke="#818cf8" strokeWidth={2.5}
+                      fill="url(#savingsGrad)"
+                      dot={{ fill: '#818cf8', r: 4, strokeWidth: 0 }}
+                      activeDot={{ r: 6, fill: '#818cf8' }} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
             </div>
 
-            {/* Pie — Expense Breakdown */}
+            {/* Pie: Category breakdown */}
             <div className="chart-card glass-card chart-pie-card">
               <div className="chart-header">
                 <h2>Expense Breakdown</h2>
                 <p className="section-sub">{MONTHS[activeMonth]} {activeYear}</p>
               </div>
               {pieData.length === 0 ? (
-                <div className="chart-empty">
-                  <span>🥧</span><p>No expenses this month</p>
-                </div>
+                <div className="chart-empty"><span>🥧</span><p>No expenses this month</p></div>
               ) : (
                 <div className="pie-layout">
                   <ResponsiveContainer width="100%" height={230}>
@@ -505,7 +549,7 @@ export default function App() {
                           <Cell key={i} fill={entry.fill} stroke="transparent" />
                         ))}
                       </Pie>
-                      <Tooltip content={<PieTooltip />} />
+                      <Tooltip content={<PieTip />} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="pie-legend">
@@ -514,6 +558,7 @@ export default function App() {
                         <span className="pie-dot" style={{ background: d.fill }} />
                         <span className="pie-cat">{CAT_ICONS[d.name]} {d.name}</span>
                         <span className="pie-val">{d.percent}</span>
+                        <span className="pie-amount">{fmt(d.value)}</span>
                       </div>
                     ))}
                   </div>
@@ -521,47 +566,31 @@ export default function App() {
               )}
             </div>
 
-            {/* Summary Stats */}
+            {/* Monthly Summary stats */}
             <div className="chart-card glass-card">
               <div className="chart-header">
                 <h2>Monthly Summary</h2>
                 <p className="section-sub">{MONTHS[activeMonth]} {activeYear}</p>
               </div>
               <div className="stats-grid">
-                <div className="stat-item stat-income">
-                  <span className="stat-icon">💚</span>
-                  <span className="stat-label">Income</span>
-                  <span className="stat-val income-text">{formatCurrency(totalIncome)}</span>
-                </div>
-                <div className="stat-item stat-expense">
-                  <span className="stat-icon">🔴</span>
-                  <span className="stat-label">Expenses</span>
-                  <span className="stat-val expense-text">{formatCurrency(totalExpense)}</span>
-                </div>
-                <div className="stat-item stat-balance">
-                  <span className="stat-icon">{balance >= 0 ? '💜' : '🟡'}</span>
-                  <span className="stat-label">Balance</span>
-                  <span className={`stat-val ${balance >= 0 ? 'balance-pos-text' : 'balance-neg-text'}`}>{formatCurrency(balance)}</span>
-                </div>
-                <div className="stat-item stat-rate">
-                  <span className="stat-icon">📊</span>
-                  <span className="stat-label">Savings Rate</span>
-                  <span className="stat-val cyan-text">{savingsRate.toFixed(1)}%</span>
-                </div>
-                <div className="stat-item stat-txcount">
-                  <span className="stat-icon">🧾</span>
-                  <span className="stat-label">Transactions</span>
-                  <span className="stat-val white-text">{monthlyTransactions.length}</span>
-                </div>
-                <div className="stat-item stat-avgexp">
-                  <span className="stat-icon">📉</span>
-                  <span className="stat-label">Avg Expense</span>
-                  <span className="stat-val yellow-text">
-                    {monthlyTransactions.filter(t=>t.type==='expense').length > 0
-                      ? formatCurrency(totalExpense / monthlyTransactions.filter(t=>t.type==='expense').length)
-                      : '₹0'}
-                  </span>
-                </div>
+                {[
+                  { icon:'💚', label:'Income',       val: fmt(totalIncome),  cls:'income-text' },
+                  { icon:'🔴', label:'Expenses',     val: fmt(totalExpense), cls:'expense-text' },
+                  { icon: balance>=0 ? '💜':'🟡', label:'Balance', val: fmt(balance), cls: balance>=0?'balance-pos-text':'balance-neg-text' },
+                  { icon:'📊', label:'Savings Rate', val:`${savingsRate.toFixed(1)}%`, cls:'cyan-text' },
+                  { icon:'🧾', label:'Transactions', val: monthlyTransactions.length, cls:'white-text' },
+                  { icon:'📉', label:'Avg Expense',
+                    val: monthlyTransactions.filter(t=>t.type==='expense').length > 0
+                      ? fmt(totalExpense / monthlyTransactions.filter(t=>t.type==='expense').length)
+                      : `${currency.symbol}0`,
+                    cls:'yellow-text' },
+                ].map((s, i) => (
+                  <div key={i} className="stat-item">
+                    <span className="stat-icon">{s.icon}</span>
+                    <span className="stat-label">{s.label}</span>
+                    <span className={`stat-val ${s.cls}`}>{s.val}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -603,12 +632,15 @@ export default function App() {
               <div className="form-row-2">
                 <div className="form-row">
                   <label>Category</label>
+                  {/* ✅ value={c} — stores only "Food" not "🍔 Food" */}
                   <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                    {CATEGORIES.map(c => <option key={c}>{CAT_ICONS[c]} {c}</option>)}
+                    {CATEGORIES.map(c => (
+                      <option key={c} value={c}>{CAT_ICONS[c]} {c}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-row">
-                  <label>Amount (₹)</label>
+                  <label>Amount ({currency.symbol})</label>
                   <input required type="number" min="0.01" step="0.01" value={form.amount}
                     onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0" />
                 </div>
@@ -647,7 +679,7 @@ export default function App() {
                   <span className="budget-edit-icon">{CAT_ICONS[cat]}</span>
                   <label>{cat}</label>
                   <div className="budget-edit-input-wrap">
-                    <span className="input-prefix">₹</span>
+                    <span className="input-prefix">{currency.symbol}</span>
                     <input type="number" min="0" step="1"
                       value={budgetLimits[cat]}
                       onChange={e => setBudgetLimits(b => ({ ...b, [cat]: parseFloat(e.target.value) || 0 }))} />
@@ -696,3 +728,4 @@ export default function App() {
     </div>
   )
 }
+
