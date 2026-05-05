@@ -21,6 +21,8 @@ A modern web application for tracking and managing your personal budget with vis
 
 Budget Maintenance is a React-based web application designed to help you track expenses, visualize spending patterns, and manage your personal budget efficiently. With an intuitive interface and powerful visualization tools powered by Recharts, you can easily monitor your financial health.
 
+> 💱 **Multi-Currency Support**: Track your finances in any currency! Budget Maintenance supports multiple currency options, allowing you to manage your budget in your local currency or switch between different currencies seamlessly.
+
 ## ✨ Features
 
 - 📊 Interactive dashboard with charts and graphs
@@ -30,6 +32,7 @@ Budget Maintenance is a React-based web application designed to help you track e
 - 📋 Detailed budget progress by category
 - 🎯 Monthly spending analysis
 - 💎 Net balance and savings rate calculation
+- 💱 **Multi-Currency Support** - Use any currency for your budget
 - ⚡ Lightning-fast development with Vite HMR
 - 🎨 Modern React 19 architecture
 - ✅ Code quality with ESLint
@@ -65,20 +68,23 @@ The complete dashboard showing income, expenses, net balance, and savings rate a
 - **Budget Progress**: Side panel with category breakdown
 - **Month Navigation**: Switch between different months
 - **Quick Actions**: Add, clear, and manage transactions
+- **💱 Currency Selection**: Choose your preferred currency (INR, USD, EUR, GBP, JPY, AUD, CAD, and more)
 
 ---
 
 ### 3. Home Page (Empty State)
-Clean home page interface ready to add your first transaction.
+Clean home page interface ready to add your first transaction with currency selection options.
 
 ![Home Page](screenshots/3-home-page.png)
 
 **Features:**
 - Welcome state with financial summary cards
 - Total income, expenses, net balance, and savings rate
+- **💱 Multi-Currency Options**: Select from various currencies (INR, USD, EUR, GBP, JPY, AUD, CAD, CHF, CNY, SEK, NZD, and more)
 - Budget progress sidebar
 - Intuitive call-to-action to add your first transaction
-- Month and currency selection
+- Month and currency selection dropdown
+- Currency support for global users
 
 ---
 
@@ -95,6 +101,7 @@ Detailed list of all transactions made during the month with type and amount.
 - Filter by transaction type
 - Filter by expense category
 - Transaction date and timestamps
+- All amounts displayed in your selected currency
 
 ---
 
@@ -360,7 +367,21 @@ All commands should be run from the project root directory:
 ## 📋 App Functionality Guide
 
 ### Home Page
-The landing page of the application displaying a welcome message and quick navigation to all features. Shows financial summary cards with total income, expenses, net balance, and savings rate.
+The landing page of the application displaying a welcome message and quick navigation to all features. Shows financial summary cards with total income, expenses, net balance, and savings rate. Includes **currency selection** to choose your preferred currency for all transactions and reporting.
+
+**Supported Currencies:**
+- 💵 USD (US Dollar)
+- 💶 EUR (Euro)
+- 💷 GBP (British Pound)
+- 💴 JPY (Japanese Yen)
+- 💰 INR (Indian Rupee)
+- 🇦🇺 AUD (Australian Dollar)
+- 🇨🇦 CAD (Canadian Dollar)
+- 🇨🇭 CHF (Swiss Franc)
+- 🇨🇳 CNY (Chinese Yuan)
+- 🇸🇪 SEK (Swedish Krona)
+- 🇳🇿 NZD (New Zealand Dollar)
+- And many more!
 
 ### Budget Page
 View your overall budget progress for the entire month. This page displays:
@@ -369,15 +390,17 @@ View your overall budget progress for the entire month. This page displays:
 - Budget limits per category
 - Visual progress indicators
 - Multiple expense categories: Housing, Food, Transport, Healthcare, Entertainment, Shopping, Education, Savings, and Other
+- All amounts displayed in your selected currency
 
 ### Budget Table
 Comprehensive breakdown of your monthly spending:
-- Detailed expense entries
+- Detailed expense entries in your chosen currency
 - Categories for each transaction
 - Spending amounts per category
 - Total spending across all categories
 - Real-time budget tracking
 - Category-wise expense analysis
+- Currency symbol automatically applied to all values
 
 ### Income Slip (Transaction History)
 Complete transaction record showing all financial activities:
@@ -388,6 +411,7 @@ Complete transaction record showing all financial activities:
 - Transaction types (income/expense)
 - Category information for each transaction
 - Filter options by type and category
+- All transaction amounts in your selected currency
 
 ## 🔧 Development Workflow
 
