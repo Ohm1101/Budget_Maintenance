@@ -6,6 +6,7 @@ A modern web application for tracking and managing your personal budget with vis
 
 - [Overview](#overview)
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
@@ -25,10 +26,77 @@ Budget Maintenance is a React-based web application designed to help you track e
 - 📊 Interactive dashboard with charts and graphs
 - 💰 Expense tracking and categorization
 - 📈 Budget visualization using Recharts
+- 💵 Income and transaction tracking
+- 📋 Detailed budget progress by category
+- 🎯 Monthly spending analysis
+- 💎 Net balance and savings rate calculation
 - ⚡ Lightning-fast development with Vite HMR
 - 🎨 Modern React 19 architecture
 - ✅ Code quality with ESLint
 - 🚀 Optimized production builds
+
+## 📸 Screenshots
+
+### 1. Budget Progress Overview
+View your monthly budget breakdown by category with spending limits and current expenses.
+
+![Budget Progress](screenshots/1-budget-progress.png)
+
+**Features:**
+- Category-wise budget allocation
+- Real-time spending status
+- Multiple expense categories (Housing, Food, Transport, Healthcare, Entertainment, Shopping, Education, Savings, Other)
+- Visual indicators for budget tracking
+
+---
+
+### 2. Dashboard - Main Interface
+The complete dashboard showing income, expenses, net balance, and savings rate at a glance.
+
+![Dashboard](screenshots/2-dashboard.png)
+
+**Features:**
+- **Total Income**: Track all income entries
+- **Total Expenses**: Monitor total spending
+- **Net Balance**: See your surplus/deficit
+- **Savings Rate**: Calculate percentage of income saved
+- **Transactions Tab**: View all transaction entries
+- **Charts & Insights Tab**: Access visual analytics
+- **Budget Progress**: Side panel with category breakdown
+- **Month Navigation**: Switch between different months
+- **Quick Actions**: Add, clear, and manage transactions
+
+---
+
+### 3. Home Page (Empty State)
+Clean home page interface ready to add your first transaction.
+
+![Home Page](screenshots/3-home-page.png)
+
+**Features:**
+- Welcome state with financial summary cards
+- Total income, expenses, net balance, and savings rate
+- Budget progress sidebar
+- Intuitive call-to-action to add your first transaction
+- Month and currency selection
+
+---
+
+### 4. Income Slip - Transaction History
+Detailed list of all transactions made during the month with type and amount.
+
+![Income Slip](screenshots/4-income-slip.png)
+
+**Features:**
+- Complete transaction history
+- Transaction details (name, category, type, date, amount)
+- Income entries (shown in green, with + prefix)
+- Expense entries (shown in red, with - prefix)
+- Filter by transaction type
+- Filter by expense category
+- Transaction date and timestamps
+
+---
 
 ## 🛠️ Tech Stack
 
@@ -257,6 +325,12 @@ Budget_Maintenance/
 ├── public/                      # Static assets
 │   └── favicon.ico             # Website favicon
 │
+├── screenshots/                 # Screenshots for documentation
+│   ├── 1-budget-progress.png
+│   ├── 2-dashboard.png
+│   ├── 3-home-page.png
+│   └── 4-income-slip.png
+│
 ├── dist/                        # Production build (created after build)
 │
 ├── node_modules/               # Dependencies (auto-generated)
@@ -282,6 +356,38 @@ All commands should be run from the project root directory:
 | `npm run preview` | Preview production build locally |
 | `npm run lint` | Check code quality with ESLint |
 | `npm run lint -- --fix` | Auto-fix linting issues |
+
+## 📋 App Functionality Guide
+
+### Home Page
+The landing page of the application displaying a welcome message and quick navigation to all features. Shows financial summary cards with total income, expenses, net balance, and savings rate.
+
+### Budget Page
+View your overall budget progress for the entire month. This page displays:
+- Category-wise budget allocation
+- Current spending in each category
+- Budget limits per category
+- Visual progress indicators
+- Multiple expense categories: Housing, Food, Transport, Healthcare, Entertainment, Shopping, Education, Savings, and Other
+
+### Budget Table
+Comprehensive breakdown of your monthly spending:
+- Detailed expense entries
+- Categories for each transaction
+- Spending amounts per category
+- Total spending across all categories
+- Real-time budget tracking
+- Category-wise expense analysis
+
+### Income Slip (Transaction History)
+Complete transaction record showing all financial activities:
+- All transactions made during the month
+- Income entries (salary, bonus, etc.)
+- Expense entries (rent, food, shopping, etc.)
+- Transaction dates and timestamps
+- Transaction types (income/expense)
+- Category information for each transaction
+- Filter options by type and category
 
 ## 🔧 Development Workflow
 
